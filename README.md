@@ -12,7 +12,7 @@ Raw CSVs → PostgreSQL star schema → analytical SQL → Power BI dashboard.**
 
 *(Published to Power BI Service · public Olist sample data · no login required)*
 
-[![RetailPulse dashboard overview](assets/dashboard_hero.png)](https://app.powerbi.com/view?r=eyJrIjoiYTBmMDI3ZWMtMDExZC00MmM0LTk5ZTYtYjY4YTlhNTk4N2EyIiwidCI6ImQ1N2QzMmNjLWMxMjEtNDg4Zi1iMDdiLWRmZTcwNTY4MGM3MSIsImMiOjN9&pageName=f28b4b4a651ff21ecd55)
+[![RetailPulse dashboard overview](assets/dashboard_overview.png)](https://app.powerbi.com/view?r=eyJrIjoiYTBmMDI3ZWMtMDExZC00MmM0LTk5ZTYtYjY4YTlhNTk4N2EyIiwidCI6ImQ1N2QzMmNjLWMxMjEtNDg4Zi1iMDdiLWRmZTcwNTY4MGM3MSIsImMiOjN9&pageName=f28b4b4a651ff21ecd55)
 
 ---
 
