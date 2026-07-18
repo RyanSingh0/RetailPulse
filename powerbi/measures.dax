@@ -1,0 +1,162 @@
+// =====================================================================
+// measures.dax  ·  RetailPulse
+// All DAX measures for the Power BI report. Create a measure table (or
+// drop these on fact_order_items) and paste each block as a new measure.
+// Model assumed: star schema from sql/03_star_schema.sql --
+//   fact_order_items  *--1  dim_date     (date_key)
+//   fact_order_items  *--1  dim_customer (customer_key)
+//   fact_order_items  *--1  dim_product  (product_key)
+//   fact_order_items  *--1  dim_seller   (seller_key)
+// dim_date is marked as the report's Date Table.
+// =====================================================================
+
+
+// --- CORE ------------------------------------------------------------
+
+Total Revenue =
+SUMX ( fact_order_items, fact_order_items[price] + fact_order_items[freight_value] )
+
+Total Orders =
+DISTINCTCOUNT ( fact_order_items[order_id] )
+
+Total Customers =
+DISTINCTCOUNT ( fact_order_items[customer_key] )
+
+Total Items =
+COUNTROWS ( fact_order_items )
+
+AOV =                                   // average order value
+DIVIDE ( [Total Revenue], [Total Orders] )
+
+
+// --- GROWTH / TIME INTELLIGENCE -------------------------------------
+// Requires dim_date set as the Date Table.
+
+Revenue PM =                            // previous month
+CALCULATE ( [Total Revenue], DATEADD ( dim_date[date_key], -1, MONTH ) )
+
+MoM Revenue Growth % =
+VAR Curr = [Total Revenue]
+VAR Prev = [Revenue PM]
+RETURN DIVIDE ( Curr - Prev, Prev )     // format as %
+
+Rolling 3-Month Revenue =
+CALCULATE (
+    [Total Revenue],
+    DATESINPERIOD ( dim_date[date_key], MAX ( dim_date[date_key] ), -3, MONTH )
+)
+
+Revenue YTD =
+TOTALYTD ( [Total Revenue], dim_date[date_key] )
+
+Cumulative Revenue =
+CALCULATE (
+    [Total Revenue],
+    FILTER ( ALLSELECTED ( dim_date[date_key] ),
+             dim_date[date_key] <= MAX ( dim_date[date_key] ) )
+)
+
+// --- SINGLE-NUMBER "LATEST MONTH" MEASURES (for cards) ---------------
+// The generic MoM measure is meaningless at the grand total, so these
+// pin to the most recent COMPLETE month. The Olist data trails off to a
+// stray 1-order month (Sep 2018); any month under 100 orders is treated
+// as incomplete and skipped, so "latest" resolves to Aug 2018.
+
+Latest Complete Month =              // returns a date (1st of the month)
+VAR Months =
+    CALCULATETABLE (
+        ADDCOLUMNS ( VALUES ( fact_order_items[date_key] ), "@orders", [Total Orders] ),
+        ALL ( dim_date )
+    )
+RETURN MAXX ( FILTER ( Months, [@orders] >= 100 ), fact_order_items[date_key] )
+
+Revenue (Latest Month) =
+CALCULATE ( [Total Revenue],
+    ALL ( dim_date ),
+    fact_order_items[date_key] = [Latest Complete Month] )
+
+MoM Growth (Latest Month) =          // put THIS on the card, format as %
+VAR LastM   = [Latest Complete Month]
+VAR CurrRev = CALCULATE ( [Total Revenue], ALL ( dim_date ), fact_order_items[date_key] = LastM )
+VAR PrevRev = CALCULATE ( [Total Revenue], ALL ( dim_date ), fact_order_items[date_key] = EDATE ( LastM, -1 ) )
+RETURN DIVIDE ( CurrRev - PrevRev, PrevRev )
+
+MoM (Latest Month) Label =           // optional: arrow + % for a nicer card
+VAR g = [MoM Growth (Latest Month)]
+RETURN IF ( g >= 0, "▲ ", "▼ " ) & FORMAT ( g, "0.0%" )
+        & "  vs prior month"
+
+
+// --- CUSTOMER / RETENTION -------------------------------------------
+
+Repeat Customers =                      // customers with >1 order
+CALCULATE (
+    DISTINCTCOUNT ( fact_order_items[customer_key] ),
+    FILTER (
+        VALUES ( fact_order_items[customer_key] ),
+        CALCULATE ( DISTINCTCOUNT ( fact_order_items[order_id] ) ) > 1
+    )
+)
+
+Retention Rate =                        // repeat / all -> the "do they come back" KPI
+DIVIDE ( [Repeat Customers], [Total Customers] )
+
+Revenue per Customer =
+DIVIDE ( [Total Revenue], [Total Customers] )
+
+
+// --- DELIVERY / EXPERIENCE ------------------------------------------
+// review_score is denormalised onto fact_order_items in 03_star_schema.sql,
+// so no extra table or bi-directional filter is needed.
+
+Avg Review Score =
+AVERAGE ( fact_order_items[review_score] )
+
+Avg Delivery Days =
+AVERAGE ( fact_order_items[delivery_days] )
+
+On-Time Delivery % =
+DIVIDE (
+    CALCULATE ( COUNTROWS ( fact_order_items ), fact_order_items[delivered_on_time] = TRUE () ),
+    CALCULATE ( COUNTROWS ( fact_order_items ), NOT ISBLANK ( fact_order_items[delivered_on_time] ) )
+)
+
+
+// --- HELPERS FOR CARDS / TITLES -------------------------------------
+
+Total Revenue (R$M) =
+FORMAT ( [Total Revenue] / 1000000, "R$0.0" ) & "M"
+
+MoM Growth Label =
+VAR g = [MoM Revenue Growth %]
+RETURN IF ( g >= 0, "▲ ", "▼ " ) & FORMAT ( g, "0.0%" )
+
+
+// =====================================================================
+// CALCULATED COLUMNS  (NOT measures)
+// Create these with  Table tools → New column  (on fact_order_items),
+// not New measure. They add a column to the table, used as a chart axis.
+// =====================================================================
+
+// delivery_bucket -> the X axis of the "Avg Review by delivery time"
+// column chart on Page 3. Lives on fact_order_items (needs delivery_days).
+delivery_bucket =
+VAR d = fact_order_items[delivery_days]
+RETURN
+    SWITCH ( TRUE (),
+        ISBLANK ( d ), "Not delivered",
+        d <= 3,  "0-3 days",
+        d <= 7,  "4-7 days",
+        d <= 14, "8-14 days",
+        d <= 21, "15-21 days",
+        "22+ days" )
+
+// Sort order for delivery_bucket (so the axis reads 0-3 → 22+, not A-Z).
+// After creating it: select delivery_bucket → Column tools → Sort by
+// column → delivery_bucket_sort.
+delivery_bucket_sort =
+VAR d = fact_order_items[delivery_days]
+RETURN
+    SWITCH ( TRUE (),
+        ISBLANK ( d ), 99,
+        d <= 3,  1, d <= 7, 2, d <= 14, 3, d <= 21, 4, 5 )

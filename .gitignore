@@ -1,0 +1,23 @@
+# --- Raw data (do NOT commit; document the Kaggle download in README) ---
+data/raw/*
+!data/raw/.gitkeep
+
+# --- Power BI ---
+*.pbix.tmp
+*~$*.pbix
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Python (helper scripts / venvs) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- DuckDB / local db artifacts ---
+*.duckdb
+*.duckdb.wal
