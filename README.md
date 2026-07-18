@@ -137,18 +137,12 @@ Four pages built on the star schema, with custom DAX measures
 outputs. Swap in your own Power BI screenshots after publishing.
 
 **Page 1: Executive Overview** · revenue trend, MoM growth, KPI cards and top categories
-![Overview](assets/previews/01_revenue_trend.png)
 
 **Page 2: Customers & Retention** · repeat-vs-one-time, cohort heatmap and RFM segments
-![Repeat customers](assets/previews/03_repeat_customers.png)
-![RFM segments](assets/previews/04_rfm_segments.png)
 
 **Page 3: Products & Categories** · category ranking and the delivery-vs-review finding
-![Delivery vs review](assets/previews/02_delivery_vs_review.png)
-![Top categories](assets/previews/05_top_categories.png)
 
 **Page 4: Geography** · revenue by state and regional roll-up
-![Geography](assets/previews/06_geography.png)
 
 > Final Power BI screenshots go in `assets/` as `dashboard_overview.png`,
 > `dashboard_cohort.png`, `dashboard_product.png` and `dashboard_geo.png`.
